@@ -1,0 +1,54 @@
+#include <DHT.h>
+#include <Ultrasonic.h>
+#include <IRremote.h>
+
+#define DHTPIN 4
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+#define TRIG_PIN 2
+#define ECHO_PIN 3
+Ultrasonic ultrasonic(TRIG_PIN, ECHO_PIN);
+
+#define IR_RECV_PIN 5
+IRrecv irrecv(IR_RECV_PIN);
+decode_results results;
+
+#define LED_PIN_IR 6  // LED controlled by the IR remote
+
+// Define HEX codes for IR remote
+#define IR_ON_CODE  0xFFA25D  // Replace with the actual HEX code for turning on the LED
+#define IR_OFF_CODE 0xFFE21D  // Replace with the actual HEX code for turning off the LED
+
+void setup() {
+  pinMode(LED_PIN_IR, OUTPUT);
+  Serial.begin(9600);
+  irrecv.enableIRIn();
+  dht.begin();
+}
+
+void loop() {
+  // Read humidity and temperature
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
+  
+  // Check IR commands
+  if (irrecv.decode(&results)) {
+    if (results.value == IR_ON_CODE) { // If ON code is received
+      digitalWrite(LED_PIN_IR, HIGH); // Turn on the LED
+      Serial.println("LED Turned On");
+    } else if (results.value == IR_OFF_CODE) { // If OFF code is received
+      digitalWrite(LED_PIN_IR, LOW);  // Turn off the LED
+      Serial.println("LED Turned Off");
+    }
+    irrecv.resume(); // Prepare for the next IR command
+  }
+
+  // Send data over serial
+  Serial.print(temperature);
+  Serial.print(",");
+  Serial.print(humidity);
+  Serial.println();
+
+  delay(200); // Short delay to avoid overloading the serial output
+}
