@@ -1,0 +1,71 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <ArduinoJson.h>  // Ensure you have installed this library
+
+const char* ssid = "MDX welcomes you";
+const char* password = "MdxL0vesyou";
+const char* API_URL = "https://api.thingspeak.com/channels/2727998/feeds/last.json"; // Get the latest entry only
+
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+void setup() {
+  Serial.begin(115200);
+  lcd.init();
+  lcd.backlight();
+  WiFi.begin(ssid, password);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("WiFi connected");
+}
+
+void loop() {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    http.begin(API_URL);
+    int httpCode = http.GET();
+
+    if (httpCode > 0) {
+      String payload = http.getString();
+      lcd.clear();
+      displayData(payload);
+    } else {
+      Serial.println("Error on HTTP request");
+    }
+
+    http.end();
+  }
+  delay(60000); // Update every minute
+}
+
+void displayData(String json) {
+  DynamicJsonDocument doc(1024);
+  deserializeJson(doc, json);
+
+  float temp = doc["field1"].as<float>();
+  float hum = doc["field2"].as<float>();
+  float dist = doc["field3"].as<float>(); // Assuming distance is stored in field3
+
+  lcd.setCursor(0, 0);
+  lcd.print("Temp: " + String(temp, 1) + "C");
+  
+  lcd.setCursor(0, 1);
+  lcd.print("Hum: " + String(hum, 1) + "%");
+
+  // Display "Welcome Home" if the distance is less than 10cm
+  if (dist < 10.0) {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Welcome Home");
+    delay(5000); // Display the message for 5 seconds
+    lcd.clear(); // Clear after displaying message
+    lcd.setCursor(0, 0);
+    lcd.print("Temp: " + String(temp, 1) + "C");
+    lcd.setCursor(0, 1);
+    lcd.print("Hum: " + String(hum, 1) + "%");
+  }
+}
