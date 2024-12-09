@@ -1,0 +1,29 @@
+import serial
+import requests
+
+# Serial and ThingSpeak settings
+SERIAL_PORT = 'COM4'  # Adjust according to your system
+BAUD_RATE = 9600
+THING_SPEAK_URL = "https://api.thingspeak.com/update"
+API_KEY = '0Q62E9FLCU962MAS'
+
+# Open serial port
+ser = serial.Serial(SERIAL_PORT, BAUD_RATE)
+
+def send_to_thingspeak(temp, hum, dist):
+    response = requests.get(THING_SPEAK_URL, params={
+        "api_key": API_KEY,
+        "field1": temp,
+        "field2": hum,
+        "field3": dist
+    })
+    print(f"Data sent to ThingSpeak with response code: {response.status_code}")
+
+while True:
+    if ser.in_waiting > 0:
+        data = ser.readline().decode().strip()
+        try:
+            temperature, humidity, distance = data.split(',')
+            send_to_thingspeak(temperature, humidity, distance)
+        except ValueError:
+            print(f"Invalid data received: {data}")
